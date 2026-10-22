@@ -5,8 +5,25 @@ from discord.ui import Select, View, Button
 import re
 from datetime import timedelta
 import asyncio
+from flask import Flask
+from threading import Thread
 
-# Cấu hình Intents Discord
+# --- 📌 TẠO SERVER FLASK ĐỂ RENDER BẢO TRÌ UPTIME 24/7 ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot Đệ Alpha 3 đang chạy 24/7 thành công!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.daemon = True
+    t.start()
+
+# --- 📌 CẤU HÌNH BOT DISCORD ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -17,12 +34,8 @@ bot = commands.Bot(command_prefix=".", intents=intents, help_command=None, recon
 
 bot_permissions = {}
 
-# 🔒 ĐỘC QUYỀN 2 ADMIN TỐI CAO
 ALLOWED_ADMIN_USERNAMES = ["alphathunderkethulinh", "bomayduwar"]
-
-# CHỈ BẮT XÁC NHẬN CHO 2 ROLE CAO NHẤT
 STRICT_VIP_ROLES = ["owner | admin 👑", "administrator"]
-
 HIGHEST_ROLE_NAMES = ["owner | admin 👑", "administrator"]
 HIGH_ROLE_NAMES = ["đấng tối cao", "alphathunder", "dev"]
 MEDIUM_ROLE_NAMES = ["member", "aecw"]
@@ -33,20 +46,17 @@ ONLINE_NOTIFY_CHANNEL_ID = 1562102970684940298
 WELCOME_GIF_URL = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNnh4Z3p5Z3Zydm1pZjBsYTh3d3Y0ZGNyZTF4Yzg3eG9yZXF2pDE0ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L1R1tvI9svvpHujy26/giphy.gif"
 
 
-# --- 📌 ĐỒNG BỘ LỆNH SLASH (/) VÀ THÔNG BÁO TỰ ĐỘNG ---
 @bot.event
 async def on_ready():
-    print(f"🚀 [ONLINE 24/7] Bot {bot.user} đã kết nối thành công với Token mới!")
+    print(f"🚀 [ONLINE 24/7] Bot {bot.user} đã kết nối thành công!")
     await bot.change_presence(activity=discord.Game(name="👑 Anh Em Chat War | .help"))
     
-    # Đồng bộ danh sách lệnh Slash (/) với Discord
     try:
         synced = await bot.tree.sync()
         print(f"✅ Đã đồng bộ {len(synced)} lệnh Slash (/) thành công!")
     except Exception as e:
         print(f"⚠️ Lỗi đồng bộ lệnh Slash: {e}")
 
-    # Chờ 2 giây gửi tin nhắn thông báo khi khởi động
     await asyncio.sleep(2)
     channel = bot.get_channel(ONLINE_NOTIFY_CHANNEL_ID)
     if channel:
@@ -55,7 +65,7 @@ async def on_ready():
                 title="⚡ HỆ THỐNG BOT ĐÃ KÍCH HOẠT ⚡",
                 description=(
                     f"# 🚀 Bot {bot.user.mention} đã hoạt động thành công!\n\n"
-                    f"🟢 **Trạng thái:** Đã kết nối hệ thống\n"
+                    f"🟢 **Trạng thái:** Đã kết nối hệ thống 24/7\n"
                     f"👑 **Sẵn sàng:** Dùng `/bot` hoặc `/onlbot1` để đánh thức bot!"
                 ),
                 color=discord.Color.green()
@@ -65,7 +75,6 @@ async def on_ready():
             print(f"Lỗi gửi thông báo online: {e}")
 
 
-# --- 📌 LỆNH SLASH DẠNG (/) ĐÁNH THỨC BOT ---
 @bot.tree.command(name="bot", description="Đánh thức Bot dậy")
 async def slash_bot(interaction: discord.Interaction):
     await interaction.response.send_message(f"# 👑 Xin chào ông chủ {interaction.user.mention}!")
@@ -75,7 +84,6 @@ async def slash_onlbot1(interaction: discord.Interaction):
     await interaction.response.send_message(f"# 👑 Xin chào ông chủ {interaction.user.mention}!")
 
 
-# --- 📌 TỰ ĐỘNG BẮT TỪ KHÓA CHAT VÀ PHẢN HỒI KHI BỊ TAG ---
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -116,7 +124,6 @@ def check_exclusive_admin(ctx):
     return ctx.author.name.lower() in ALLOWED_ADMIN_USERNAMES
 
 
-# --- 📌 THỰC THI CẤP ROLE HÀNG LOẠT ---
 async def execute_add_role(channel, author, role, members):
     success_members = []
     failed_members = []
@@ -157,7 +164,6 @@ async def execute_add_role(channel, author, role, members):
         )
 
 
-# --- 📌 VIEW XÁC NHẬN ROLE VIP ---
 class ConfirmRoleView(View):
     def __init__(self, author, role, target_members):
         super().__init__(timeout=60)
@@ -181,7 +187,6 @@ class ConfirmRoleView(View):
         await interaction.response.edit_message(content="❌ Đã hủy thao tác cấp Role VIP!", view=None)
 
 
-# --- 📌 MỤC CẤP ROLE THÔNG MINH ---
 class SmartMemberSelectForAdd(Select):
     def __init__(self, role, author):
         self.role = role
@@ -264,7 +269,6 @@ class SmartMemberSelectForAdd(Select):
             await execute_add_role(interaction.channel, self.author, self.role, selected_members)
 
 
-# --- 📌 MỤC XÓA ROLE THÔNG MINH ---
 class SmartMemberSelectForRemove(Select):
     def __init__(self, role, author):
         self.role = role
@@ -331,7 +335,6 @@ class SmartMemberSelectForRemove(Select):
             await interaction.followup.send(content=f"@here ⚠️ Cập nhật xóa Role!", embed=embed)
 
 
-# --- 📌 BẢNG ROLE CHÍNH (.bangrole) ---
 class MasterBangRoleSelect(Select):
     def __init__(self, mode, author):
         self.mode = mode
@@ -402,7 +405,6 @@ class MasterBangRoleView(View):
         await interaction.response.edit_message(content="# 🗑️ ĐÃ CHUYỂN SANG CHẾ ĐỘ XÓA ROLE THÔNG MINH", view=self)
 
 
-# --- 📌 LỆNH .bangrole ---
 @bot.command(name="bangrole")
 async def bangrole_cmd(ctx):
     if not check_exclusive_admin(ctx):
@@ -423,7 +425,6 @@ async def bangrole_cmd(ctx):
     await ctx.send(embed=embed, view=view)
 
 
-# --- 📌 BẢNG XẾP HẠNG ROLE .Roleall ---
 @bot.command(name="Roleall")
 async def role_all_command(ctx):
     if not check_exclusive_admin(ctx):
@@ -443,7 +444,6 @@ async def role_all_command(ctx):
     await ctx.send(embed=embed)
 
 
-# --- 📌 LỆNH .Add VÀ .UnLever ---
 @bot.command(name="Add")
 async def add_permission(ctx, arg1: str = None, arg2: str = None, member: discord.Member = None):
     if not check_exclusive_admin(ctx):
@@ -501,7 +501,6 @@ async def unlever_permission(ctx, member: discord.Member = None):
     await ctx.send(f"# ❌ Người chơi {member.mention} đã bị ông chủ gỡ quyền Level!")
 
 
-# --- 📌 LỆNH .Xoamainauto ---
 class ChannelSelect(Select):
     def __init__(self, channels):
         options = [
@@ -605,7 +604,6 @@ async def delete_main_auto_command(ctx):
     await ctx.send(embed=embed, view=view)
 
 
-# --- 📌 LỆNH .help ---
 @bot.command(name="help")
 async def help_command(ctx):
     try:
@@ -640,7 +638,6 @@ async def help_command(ctx):
         await ctx.send(text_help)
 
 
-# --- 📌 CÁC LỆNH QUẢN TRỊ KÊNH AND MUTE ---
 @bot.command(name="lock")
 async def lock_channel(ctx):
     if not check_exclusive_admin(ctx):
@@ -721,7 +718,6 @@ async def unmute_user(ctx, member: discord.Member = None):
         await ctx.send("❌ Không thể gỡ cấm chat cho người này!")
 
 
-# --- 📌 THÔNG BÁO VÀO / RỜI SERVER ---
 @bot.event
 async def on_member_join(member):
     if len([r for r in member.roles if not r.is_default()]) == 0:
@@ -774,5 +770,7 @@ async def on_member_remove(member):
             await channel.send(f"# ⚠️ {member.mention} 1 Người Đã Phản Bội Ank Emk Chat War ❤️ Thằng Lồn Ngu Đã Chạy Khỏi Sever 😂")
 
 
-# CHẠY BOT VỚI TOKEN MỚI
-bot.run("MTU2MTk5MzYwNTk4NjM5NDIyMw.G9gKkB.TE-jHvL7rMn0I3GsHbKnxqCVloqfJSnaTQIg90")
+# --- 📌 CHẠY MÁY CHỦ FLASK + DÙNG TOKEN MỚI NẤU BOT ---
+if __name__ == "__main__":
+    keep_alive()
+    bot.run("MTU2MTk5MzYwNTk4NjM5NDIyMw.G9gKkB.TE-jHvL7rMn0I3GsHbKnxqCVloqfJSnaTQIg90")
